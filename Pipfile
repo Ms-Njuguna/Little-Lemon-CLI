@@ -8,7 +8,6 @@ sqlalchemy = "*"
 alembic = "*"
 click = "*"
 rich = "*"
-tabulate = "*"
 
 [dev-packages]
 
