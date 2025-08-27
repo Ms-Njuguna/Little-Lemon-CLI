@@ -226,10 +226,30 @@ def manage_reservations():
             cust_ids = [int(c.split(".")[0]) for c in cust_choices]
             table_id = int(table_choice.split(".")[0])
 
+            # ---------------- Conflict Detection ----------------
+            conflict = session.query(Reservation).filter(
+                Reservation.table_id == table_id,
+                Reservation.time == time
+            ).first()
+
+            if conflict:
+                console.print("❌ Table is already booked at that time!", style="red")
+
+            # Suggest alternatives
+            available_tables = session.query(Table).filter(
+                ~Table.reservations.any(Reservation.time == time)
+            ).all()
+
+            if available_tables:
+                console.print("\n✅ Available alternative tables:", style="green")
+                for t in available_tables:
+                    console.print(f"- Table {t.id} (Capacity {t.capacity})")
+                continue  # 🚪 go back to menu instead of booking
+
             # ✅ Use relationship instead of foreign key
             reservation = Reservation(table_id=table_id, time=time)
             reservation.customers = [session.get(Customer, cid) for cid in cust_ids]
-            
+
             session.add(reservation)
             session.commit()
             console.print("✅ Reservation booked!", style="green")
