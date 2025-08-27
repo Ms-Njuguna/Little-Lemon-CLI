@@ -13,6 +13,6 @@ class Customer(Base):
     email_address = Column(String, unique=True, nullable=False)
     phone_number = Column(String, unique=True, nullable=False)
 
-    reservations = relationship("Reservation", secondary=reservation_customer, back_populates="customer", cascade="all, delete-orphan")
+    reservations = relationship("Reservation", secondary=reservation_customer, back_populates="customers")
 
     

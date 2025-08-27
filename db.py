@@ -9,3 +9,9 @@ engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(bind=engine)
 
 Base = declarative_base()
+
+
+from models import Table, Customer, Reservation
+
+# Create tables based on current models
+Base.metadata.create_all(engine)

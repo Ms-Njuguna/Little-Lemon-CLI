@@ -9,8 +9,7 @@ class Reservation(Base):
 
     id = Column(Integer, primary_key=True)
     time = Column(DateTime, nullable=False)
-    customer_id = Column(Integer, ForeignKey("customers.id"))
     table_id = Column(Integer, ForeignKey("tables.id"))
 
-    customer = relationship("Customer", secondary=reservation_customer, back_populates="reservations")
+    customers = relationship("Customer", secondary=reservation_customer, back_populates="reservations")
     table = relationship("Table", back_populates="reservations")

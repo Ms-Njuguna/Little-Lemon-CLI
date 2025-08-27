@@ -238,34 +238,40 @@ def manage_reservations():
                 qmark=""
             ).ask()
 
-            time = questionary.text("Enter reservation time:").ask()
+            time = questionary.text("Enter reservation time (HH:MM, 24-hour):").ask()
+            date = questionary.text("Enter reservation date (YYYY-MM-DD):").ask()
 
-            # ✅ Convert to IDs
+            try:
+               reservation_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                console.print("❌ Invalid date/time format!", style="red")
+                continue
+
             cust_ids = [int(c.split(".")[0]) for c in cust_choices]
             table_id = int(table_choice.split(".")[0])
 
-            # ---------------- Conflict Detection ----------------
             conflict = session.query(Reservation).filter(
                 Reservation.table_id == table_id,
-                Reservation.time == time
+                Reservation.time == reservation_datetime
             ).first()
 
             if conflict:
                 console.print("❌ Table is already booked at that time!", style="red")
+                available_tables = session.query(Table).filter(
+                    ~Table.reservations.any(Reservation.time == reservation_datetime)
+                ).all()
 
-            # Suggest alternatives
-            available_tables = session.query(Table).filter(
-                ~Table.reservations.any(Reservation.time == time)
-            ).all()
-
-            if available_tables:
-                console.print("\n✅ Available alternative tables:", style="green")
-                for t in available_tables:
-                    console.print(f"- Table {t.id} (Capacity {t.capacity})")
-                continue  # 🚪 go back to menu instead of booking
+                if available_tables:
+                    console.print("\n✅ Available alternative tables:", style="green")
+                    for t in available_tables:
+                        console.print(f"- Table {t.id} (Capacity {t.capacity})")
+                    continue
 
             # ✅ Use relationship instead of foreign key
-            reservation = Reservation(table_id=table_id, time=time)
+            reservation = Reservation(table_id=table_id, time=reservation_datetime)
+
+
+            #  ✅ Add customers to the reservation object before committing to the database.
             reservation.customers = [session.get(Customer, cid) for cid in cust_ids]
 
             session.add(reservation)
@@ -274,18 +280,20 @@ def manage_reservations():
 
         elif choice == "View reservations":
             reservations = session.query(Reservation).all()
-            table = RichTable(title="Reservations")
-            table.add_column("ID", justify="center")
-            table.add_column("Customer", justify="left")
-            table.add_column("Table", justify="center")
-            table.add_column("Time", justify="left")
+            rich_table = RichTable(title="Reservations")   # ✅ clearer name
+            rich_table.add_column("ID", justify="center")
+            rich_table.add_column("Customer", justify="left")
+            rich_table.add_column("Table", justify="center")
+            rich_table.add_column("Time", justify="left")
 
             for r in reservations:
-                cust = session.query(Customer).get(r.customer_id)
-                tbl = session.query(Table).get(r.table_id)
-                table.add_row(str(r.id), f"{cust.first_name} {cust.last_name}", str(tbl.table_number), r.time.strftime("%Y-%m-%d %H:%M"))
+                customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
+                db_table = session.query(Table).filter_by(id=r.table_id).first()  # ✅ renamed
+                table_number = db_table.table_number if db_table else "Unknown"
+                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time))
 
-            console.print(table)
+            console.print(rich_table)
+
 
         elif choice == "Cancel reservation" or choice == "Delete reservation":
             reservations = session.query(Reservation).all()
@@ -346,14 +354,20 @@ def manage_searches():
                 else:
                     table = RichTable(title=f"Reservations on {date_str}")
                     table.add_column("ID", justify="center")
-                    table.add_column("Customer", justify="left")
+                    table.add_column("Customers", justify="left")
                     table.add_column("Table", justify="center")
                     table.add_column("Time", justify="left")
-                    for r in results:
-                        cust = session.query(Customer).get(r.customer_id)
-                        tbl = session.query(Table).get(r.table_id)
-                        table.add_row(str(r.id), f"{cust.first_name} {cust.last_name}", str(tbl.table_number), r.time.strftime("%Y-%m-%d %H:%M"))
-                    console.print(table)
+
+                for r in results:
+                    customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
+                    tbl = session.query(Table).get(r.table_id)
+                    table.add_row(
+                        str(r.id),
+                        customer_names,
+                        str(tbl.table_number if tbl else "Unknown"),
+                        r.time.strftime("%Y-%m-%d %H:%M")
+                    )
+                console.print(table)
             except ValueError:
                 console.print("❌ Invalid date format!", style="red")
 

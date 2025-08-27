@@ -1,8 +1,8 @@
 # imports
-from sqlalchemy import Column, Integer, Table, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, Table as SQLATable
 from db import Base
 
-reservation_customer = Table(
+reservation_customer = SQLATable(
     "reservation_customer",
     Base.metadata,
     Column("reservation_id", Integer, ForeignKey("reservations.id"), primary_key=True),
