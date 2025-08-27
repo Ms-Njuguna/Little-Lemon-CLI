@@ -185,6 +185,76 @@ def manage_tables():
             break
 
 
+# ---------------- Reservations ----------------
+def manage_reservations():
+    while True:
+        console.print("\n[bold underline]Reservation Management[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose an action:",
+            choices=[
+                "Book reservation",
+                "View reservations",
+                "Cancel reservation",
+                "Delete reservation",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
+
+        if choice == "Book reservation":
+            customers = session.query(Customer).all()
+            tables = session.query(Table).all()
+            if not customers or not tables:
+                console.print("❌ Need at least 1 customer and 1 table.", style="red")
+                continue
+            cust_choice = questionary.select(
+                "Select customer:", choices=[f"{c.id}. {c.first_name} {c.last_name}" for c in customers], qmark=""
+            ).ask()
+            table_choice = questionary.select(
+                "Select table:", choices=[f"{t.id}. Table {t.table_number} (Capacity {t.capacity})" for t in tables], qmark=""
+            ).ask()
+            date_str = questionary.text("Enter date & time (YYYY-MM-DD HH:MM):").ask()
+            time = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+
+            cust_id = int(cust_choice.split(".")[0])
+            table_id = int(table_choice.split(".")[0])
+            reservation = Reservation(customer_id=cust_id, table_id=table_id, time=time)
+            session.add(reservation)
+            session.commit()
+            console.print("✅ Reservation booked!", style="green")
+
+        elif choice == "View reservations":
+            reservations = session.query(Reservation).all()
+            table = RichTable(title="Reservations")
+            table.add_column("ID", justify="center")
+            table.add_column("Customer", justify="left")
+            table.add_column("Table", justify="center")
+            table.add_column("Time", justify="left")
+
+            for r in reservations:
+                cust = session.query(Customer).get(r.customer_id)
+                tbl = session.query(Table).get(r.table_id)
+                table.add_row(str(r.id), f"{cust.first_name} {cust.last_name}", str(tbl.table_number), r.time.strftime("%Y-%m-%d %H:%M"))
+
+            console.print(table)
+
+        elif choice == "Cancel reservation" or choice == "Delete reservation":
+            reservations = session.query(Reservation).all()
+            if not reservations:
+                console.print("❌ No reservations found.", style="red")
+                continue
+            options = [f"{r.id}. {r.time.strftime('%Y-%m-%d %H:%M')}" for r in reservations]
+            selected = questionary.select("Select reservation:", choices=options, qmark="").ask()
+            res_id = int(selected.split(".")[0])
+            reservation = session.query(Reservation).get(res_id)
+            session.delete(reservation)
+            session.commit()
+            console.print("🗑️ Reservation removed!", style="red")
+
+        elif choice == "Back to main menu":
+            break
+
+
 
 
 if __name__ == "__main__":
