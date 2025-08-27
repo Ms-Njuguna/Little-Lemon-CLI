@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from db import Base
+from .reservation_customer import reservation_customer
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -12,6 +13,6 @@ class Customer(Base):
     email_address = Column(String, unique=True, nullable=False)
     phone_number = Column(String, unique=True, nullable=False)
 
-    reservations = relationship("Reservation", back_populates="customer", cascade="all, delete-orphan")
+    reservations = relationship("Reservation", secondary=reservation_customer, back_populates="customer", cascade="all, delete-orphan")
 
     
