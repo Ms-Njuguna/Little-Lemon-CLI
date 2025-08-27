@@ -137,10 +137,12 @@ def manage_tables():
         if choice == "Add table":
             table_number = int(questionary.text("Enter table number:").ask())
             capacity = int(questionary.text("Enter table capacity:").ask())
-            table = Table(table_number=table_number, capacity=capacity)
+            location = questionary.text("Enter the table location (i.e Patio, Window, Indoor):").ask()
+
+            table = Table(table_number=table_number, capacity=capacity, location=location)
             session.add(table)
             session.commit()
-            console.print(f"✅ Table {table_number} (capacity {capacity}) added!", style="green")
+            console.print(f"✅ Table {table_number} (capacity {capacity}) (location {location}) added!", style="green")
 
         elif choice == "View tables":
             tables = session.query(Table).all()
@@ -148,9 +150,10 @@ def manage_tables():
             table_view.add_column("ID", justify="center")
             table_view.add_column("Table Number", justify="center")
             table_view.add_column("Capacity", justify="center")
+            table_view.add_column("Location", justify="center")
 
             for t in tables:
-                table_view.add_row(str(t.id), str(t.table_number), str(t.capacity))
+                table_view.add_row(str(t.id), str(t.table_number), str(t.capacity), t.location or "-")
 
             console.print(table_view)
 
@@ -159,12 +162,13 @@ def manage_tables():
             if not tables:
                 console.print("❌ No tables found.", style="red")
                 continue
-            options = [f"{t.id}. Table {t.table_number} (Capacity {t.capacity})" for t in tables]
+            options = [f"{t.id}. Table {t.table_number} (Capacity {t.capacity}) (Location {t.location})" for t in tables]
             selected = questionary.select("Select table to update:", choices=options, qmark="").ask()
             table_id = int(selected.split(".")[0])
             table = session.query(Table).get(table_id)
             table.table_number = int(questionary.text("Enter new table number:", default=str(table.table_number)).ask())
             table.capacity = int(questionary.text("Enter new capacity:", default=str(table.capacity)).ask())
+            table.location = questionary.text("Enter new location:", default=(table.location or "Unknown")).ask()
             session.commit()
             console.print("✅ Table updated!", style="green")
 
@@ -173,7 +177,7 @@ def manage_tables():
             if not tables:
                 console.print("❌ No tables found.", style="red")
                 continue
-            options = [f"{t.id}. Table {t.table_number}" for t in tables]
+            options = [f"{t.id}. Table {t.table_number} " for t in tables]
             selected = questionary.select("Select table to delete:", choices=options, qmark="").ask()
             table_id = int(selected.split(".")[0])
             table = session.query(Table).get(table_id)
