@@ -81,6 +81,7 @@ def manage_customers():
                 email_address=email,
                 phone_number=phone
             )
+
             session.add(customer)
             session.commit()
             console.print(f"✅ Customer [bold]{first_name} {last_name}[/] added!", style="green")
@@ -88,6 +89,7 @@ def manage_customers():
         elif choice == "View customers":
             customers = session.query(Customer).all()
             table = RichTable(title="Customers")
+
             table.add_column("ID", justify="center")
             table.add_column("First Name", justify="left")
             table.add_column("Last Name", justify="left")
@@ -104,14 +106,17 @@ def manage_customers():
             if not customers:
                 console.print("❌ No customers found.", style="red")
                 continue
+
             options = [f"{c.id}. {c.first_name} {c.last_name}" for c in customers]
             selected = questionary.select("Select customer to update:", choices=options, qmark="").ask()
             cust_id = int(selected.split(".")[0])
-            customer = session.query(Customer).get(cust_id)
+            customer = session.get(Customer, cust_id)
+
             customer.first_name = questionary.text("Enter new first name:", default=customer.first_name).ask()
             customer.last_name = questionary.text("Enter new last name:", default=customer.last_name).ask()
             customer.email_address = questionary.text("Enter new email:", default=customer.email_address).ask()
             customer.phone_number = questionary.text("Enter new phone:", default=customer.phone_number).ask()
+
             session.commit()
             console.print("✅ Customer updated!", style="green")
 
@@ -120,10 +125,12 @@ def manage_customers():
             if not customers:
                 console.print("❌ No customers found.", style="red")
                 continue
+
             options = [f"{c.id}. {c.first_name} {c.last_name}" for c in customers]
             selected = questionary.select("Select customer to delete:", choices=options, qmark="").ask()
             cust_id = int(selected.split(".")[0])
-            customer = session.query(Customer).get(cust_id)
+            customer = session.get(Customer, cust_id)
+
             session.delete(customer)
             session.commit()
             console.print("🗑️ Customer deleted!", style="red")
@@ -153,10 +160,17 @@ def manage_tables():
             capacity = int(questionary.text("Enter table capacity:").ask())
             location = questionary.text("Enter the table location (i.e Patio, Window, Indoor):").ask()
 
-            table = Table(table_number=table_number, capacity=capacity, location=location)
-            session.add(table)
-            session.commit()
-            console.print(f"✅ Table {table_number} (capacity {capacity}) (location {location}) added!", style="green")
+            # 🔍 Check if the table number already exists
+            existing = session.query(Table).filter_by(table_number=table_number).first()
+
+            if existing:
+                console.print(f"❌ Table number {table_number} already exists.", style="red")
+            else:
+                # ✅ Only add if it's not already there
+                table = Table(table_number=table_number, capacity=capacity, location=location)
+                session.add(table)
+                session.commit()
+                console.print(f"✅ Table {table_number} (capacity {capacity}) (location {location}) added!", style="green")
 
         elif choice == "View tables":
             tables = session.query(Table).all()
@@ -176,13 +190,16 @@ def manage_tables():
             if not tables:
                 console.print("❌ No tables found.", style="red")
                 continue
+
             options = [f"{t.id}. Table {t.table_number} (Capacity {t.capacity}) (Location {t.location})" for t in tables]
             selected = questionary.select("Select table to update:", choices=options, qmark="").ask()
             table_id = int(selected.split(".")[0])
-            table = session.query(Table).get(table_id)
+            table = session.get(Table, table_id)
+
             table.table_number = int(questionary.text("Enter new table number:", default=str(table.table_number)).ask())
             table.capacity = int(questionary.text("Enter new capacity:", default=str(table.capacity)).ask())
             table.location = questionary.text("Enter new location:", default=(table.location or "Unknown")).ask()
+
             session.commit()
             console.print("✅ Table updated!", style="green")
 
@@ -191,10 +208,12 @@ def manage_tables():
             if not tables:
                 console.print("❌ No tables found.", style="red")
                 continue
+
             options = [f"{t.id}. Table {t.table_number} " for t in tables]
             selected = questionary.select("Select table to delete:", choices=options, qmark="").ask()
             table_id = int(selected.split(".")[0])
-            table = session.query(Table).get(table_id)
+            table = session.get(Table, table_id)
+
             session.delete(table)
             session.commit()
             console.print("🗑️ Table deleted!", style="red")
@@ -213,7 +232,6 @@ def manage_reservations():
                 "Book reservation",
                 "View reservations",
                 "Cancel reservation",
-                "Delete reservation",
                 "Back to main menu",
             ],
             qmark=""
@@ -295,15 +313,17 @@ def manage_reservations():
             console.print(rich_table)
 
 
-        elif choice == "Cancel reservation" or choice == "Delete reservation":
+        elif choice == "Cancel reservation":
             reservations = session.query(Reservation).all()
             if not reservations:
                 console.print("❌ No reservations found.", style="red")
                 continue
+
             options = [f"{r.id}. {r.time.strftime('%Y-%m-%d %H:%M')}" for r in reservations]
             selected = questionary.select("Select reservation:", choices=options, qmark="").ask()
             res_id = int(selected.split(".")[0])
-            reservation = session.query(Reservation).get(res_id)
+            reservation = session.get(Reservation, res_id)
+
             session.delete(reservation)
             session.commit()
             console.print("🗑️ Reservation removed!", style="red")
@@ -327,9 +347,11 @@ def manage_searches():
 
         if choice == "Find customer by name":
             name = questionary.text("Enter customer first or last name:").ask()
+
             customers = session.query(Customer).filter(
                 (Customer.first_name.like(f"%{name}%")) | (Customer.last_name.like(f"%{name}%"))
             ).all()
+
             if not customers:
                 console.print("❌ No customers found.", style="red")
             else:
@@ -349,6 +371,7 @@ def manage_searches():
                 target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
                 reservations = session.query(Reservation).all()
                 results = [r for r in reservations if r.time.date() == target_date]
+
                 if not results:
                     console.print("❌ No reservations found.", style="red")
                 else:
@@ -358,16 +381,18 @@ def manage_searches():
                     table.add_column("Table", justify="center")
                     table.add_column("Time", justify="left")
 
-                for r in results:
-                    customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
-                    tbl = session.query(Table).get(r.table_id)
-                    table.add_row(
-                        str(r.id),
-                        customer_names,
-                        str(tbl.table_number if tbl else "Unknown"),
-                        r.time.strftime("%Y-%m-%d %H:%M")
-                    )
-                console.print(table)
+                    for r in results:
+                        customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
+                        tbl = session.get(Table, r.table_id)
+
+                        table.add_row(
+                            str(r.id),
+                            customer_names,
+                            str(tbl.table_number if tbl else "Unknown"),
+                            r.time.strftime("%Y-%m-%d %H:%M")
+                        )
+                    console.print(table)
+                    
             except ValueError:
                 console.print("❌ Invalid date format!", style="red")
 
