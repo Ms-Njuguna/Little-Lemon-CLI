@@ -207,18 +207,29 @@ def manage_reservations():
             if not customers or not tables:
                 console.print("❌ Need at least 1 customer and 1 table.", style="red")
                 continue
-            cust_choice = questionary.select(
-                "Select customer:", choices=[f"{c.id}. {c.first_name} {c.last_name}" for c in customers], qmark=""
-            ).ask()
-            table_choice = questionary.select(
-                "Select table:", choices=[f"{t.id}. Table {t.table_number} (Capacity {t.capacity})" for t in tables], qmark=""
-            ).ask()
-            date_str = questionary.text("Enter date & time (YYYY-MM-DD HH:MM):").ask()
-            time = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
 
-            cust_id = int(cust_choice.split(".")[0])
+            cust_choices = questionary.checkbox(
+                "Select customers:",
+                choices=[f"{c.id}. {c.first_name} {c.last_name}" for c in customers],
+                qmark=""
+            ).ask()
+
+            table_choice = questionary.select(
+                "Select table:",
+                choices=[f"{t.id}. Table {t.id} ({t.capacity} seats)" for t in tables],
+                qmark=""
+            ).ask()
+
+            time = questionary.text("Enter reservation time:").ask()
+
+            # ✅ Convert to IDs
+            cust_ids = [int(c.split(".")[0]) for c in cust_choices]
             table_id = int(table_choice.split(".")[0])
-            reservation = Reservation(customer_id=cust_id, table_id=table_id, time=time)
+
+            # ✅ Use relationship instead of foreign key
+            reservation = Reservation(table_id=table_id, time=time)
+            reservation.customers = [session.get(Customer, cid) for cid in cust_ids]
+            
             session.add(reservation)
             session.commit()
             console.print("✅ Reservation booked!", style="green")
