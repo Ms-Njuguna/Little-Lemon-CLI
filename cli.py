@@ -5,6 +5,7 @@ from rich.table import Table as RichTable # type: ignore
 from db import SessionLocal
 from models import Customer, Table, Reservation
 from datetime import datetime
+from validators import validate_email, validate_phone
 
 session = SessionLocal()
 console = Console()
@@ -59,8 +60,21 @@ def manage_customers():
         if choice == "Add customer":
             first_name = questionary.text("Enter first name:").ask()
             last_name = questionary.text("Enter last name:").ask()
-            email = questionary.text("Enter email address:").ask()
-            phone = questionary.text("Enter phone number:").ask()
+            
+            while True:
+                email = questionary.text("Enter email address:").ask()
+                if not validate_email(email):
+                    console.print("❌ Invalid email format. Example: name@example.com", style="red")
+                else:
+                    break
+
+            while True:
+                phone = questionary.text("Enter phone number (e.g., +254712345678 or 0712345678):").ask()
+                if not validate_phone(phone):
+                    console.print("❌ Invalid phone format (7-15 digits, optional +).", style="red")
+                else:
+                    break
+
             customer = Customer(
                 first_name=first_name,
                 last_name=last_name,
