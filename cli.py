@@ -1,0 +1,404 @@
+import sys
+import questionary # type: ignore
+from rich.console import Console # type: ignore
+from rich.table import Table as RichTable # type: ignore
+from db import SessionLocal
+from models import Customer, Table, Reservation
+from datetime import datetime
+from validators import validate_email, validate_phone
+
+session = SessionLocal()
+console = Console()
+
+
+def main_menu():
+    console.print("\n🍋  Welcome to Little Lemon CLI  🍋\n")
+
+    while True:
+        choice = questionary.select(
+            "What would you like to do?",
+            choices=[
+                "1. Manage customers",
+                "2. Manage tables",
+                "3. Manage reservations",
+                "4. Quick searches",
+                questionary.Separator(),
+                "Exit",
+            ],
+            qmark=""   # remove the "?"
+        ).ask()
+
+        if choice == "1. Manage customers":
+            manage_customers()
+        elif choice == "2. Manage tables":
+            manage_tables()
+        elif choice == "3. Manage reservations":
+            manage_reservations()
+        elif choice == "4. Quick searches":
+            manage_searches()
+        elif choice == "Exit":
+            console.print("\n🍋  Thank you for using Little Lemon CLI. Goodbye! 🍋\n")
+            sys.exit(0)
+
+
+# ---------------- Customers ----------------
+def manage_customers():
+    while True:
+        console.print("\n[bold underline]Customer Management[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose an action:",
+            choices=[
+                "Add customer",
+                "View customers",
+                "Update customer",
+                "Delete customer",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
+
+        if choice == "Add customer":
+            first_name = questionary.text("Enter first name:").ask()
+            last_name = questionary.text("Enter last name:").ask()
+            
+            while True:
+                email = questionary.text("Enter email address:").ask()
+                if not validate_email(email):
+                    console.print("❌ Invalid email format. Example: name@example.com", style="red")
+                else:
+                    break
+
+            while True:
+                phone = questionary.text("Enter phone number (e.g., +254712345678 or 0712345678):").ask()
+                if not validate_phone(phone):
+                    console.print("❌ Invalid phone format (7-15 digits, optional +).", style="red")
+                else:
+                    break
+
+            customer = Customer(
+                first_name=first_name,
+                last_name=last_name,
+                email_address=email,
+                phone_number=phone
+            )
+
+            session.add(customer)
+            session.commit()
+            console.print(f"✅ Customer [bold]{first_name} {last_name}[/] added!", style="green")
+
+        elif choice == "View customers":
+            customers = session.query(Customer).all()
+            table = RichTable(title="Customers")
+
+            table.add_column("ID", justify="center")
+            table.add_column("First Name", justify="left")
+            table.add_column("Last Name", justify="left")
+            table.add_column("Email", justify="left")
+            table.add_column("Phone", justify="left")
+
+            for c in customers:
+                table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
+
+            console.print(table)
+
+        elif choice == "Update customer":
+            customers = session.query(Customer).all()
+            if not customers:
+                console.print("❌ No customers found.", style="red")
+                continue
+
+            options = [f"{c.id}. {c.first_name} {c.last_name}" for c in customers]
+            selected = questionary.select("Select customer to update:", choices=options, qmark="").ask()
+            cust_id = int(selected.split(".")[0])
+            customer = session.get(Customer, cust_id)
+
+            customer.first_name = questionary.text("Enter new first name:", default=customer.first_name).ask()
+            customer.last_name = questionary.text("Enter new last name:", default=customer.last_name).ask()
+            customer.email_address = questionary.text("Enter new email:", default=customer.email_address).ask()
+            customer.phone_number = questionary.text("Enter new phone:", default=customer.phone_number).ask()
+
+            session.commit()
+            console.print("✅ Customer updated!", style="green")
+
+        elif choice == "Delete customer":
+            customers = session.query(Customer).all()
+            if not customers:
+                console.print("❌ No customers found.", style="red")
+                continue
+
+            options = [f"{c.id}. {c.first_name} {c.last_name}" for c in customers]
+            selected = questionary.select("Select customer to delete:", choices=options, qmark="").ask()
+            cust_id = int(selected.split(".")[0])
+            customer = session.get(Customer, cust_id)
+
+            session.delete(customer)
+            session.commit()
+            console.print("🗑️ Customer deleted!", style="red")
+
+        elif choice == "Back to main menu":
+            break
+
+
+# ---------------- Tables ----------------
+def manage_tables():
+    while True:
+        console.print("\n[bold underline]Table Management[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose an action:",
+            choices=[
+                "Add table",
+                "View tables",
+                "Update table",
+                "Delete table",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
+
+        if choice == "Add table":
+            table_number = int(questionary.text("Enter table number:").ask())
+            capacity = int(questionary.text("Enter table capacity:").ask())
+            location = questionary.text("Enter the table location (i.e Patio, Window, Indoor):").ask()
+
+            # 🔍 Check if the table number already exists
+            existing = session.query(Table).filter_by(table_number=table_number).first()
+
+            if existing:
+                console.print(f"❌ Table number {table_number} already exists.", style="red")
+            else:
+                # ✅ Only add if it's not already there
+                table = Table(table_number=table_number, capacity=capacity, location=location)
+                session.add(table)
+                session.commit()
+                console.print(f"✅ Table {table_number} (capacity {capacity}) (location {location}) added!", style="green")
+
+        elif choice == "View tables":
+            tables = session.query(Table).all()
+            table_view = RichTable(title="Tables")
+            table_view.add_column("ID", justify="center")
+            table_view.add_column("Table Number", justify="center")
+            table_view.add_column("Capacity", justify="center")
+            table_view.add_column("Location", justify="center")
+
+            for t in tables:
+                table_view.add_row(str(t.id), str(t.table_number), str(t.capacity), t.location or "-")
+
+            console.print(table_view)
+
+        elif choice == "Update table":
+            tables = session.query(Table).all()
+            if not tables:
+                console.print("❌ No tables found.", style="red")
+                continue
+
+            options = [f"{t.id}. Table {t.table_number} (Capacity {t.capacity}) (Location {t.location})" for t in tables]
+            selected = questionary.select("Select table to update:", choices=options, qmark="").ask()
+            table_id = int(selected.split(".")[0])
+            table = session.get(Table, table_id)
+
+            table.table_number = int(questionary.text("Enter new table number:", default=str(table.table_number)).ask())
+            table.capacity = int(questionary.text("Enter new capacity:", default=str(table.capacity)).ask())
+            table.location = questionary.text("Enter new location:", default=(table.location or "Unknown")).ask()
+
+            session.commit()
+            console.print("✅ Table updated!", style="green")
+
+        elif choice == "Delete table":
+            tables = session.query(Table).all()
+            if not tables:
+                console.print("❌ No tables found.", style="red")
+                continue
+
+            options = [f"{t.id}. Table {t.table_number} " for t in tables]
+            selected = questionary.select("Select table to delete:", choices=options, qmark="").ask()
+            table_id = int(selected.split(".")[0])
+            table = session.get(Table, table_id)
+
+            session.delete(table)
+            session.commit()
+            console.print("🗑️ Table deleted!", style="red")
+
+        elif choice == "Back to main menu":
+            break
+
+
+# ---------------- Reservations ----------------
+def manage_reservations():
+    while True:
+        console.print("\n[bold underline]Reservation Management[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose an action:",
+            choices=[
+                "Book reservation",
+                "View reservations",
+                "Cancel reservation",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
+
+        if choice == "Book reservation":
+            customers = session.query(Customer).all()
+            tables = session.query(Table).all()
+            if not customers or not tables:
+                console.print("❌ Need at least 1 customer and 1 table.", style="red")
+                continue
+
+            cust_choices = questionary.checkbox(
+                "Select customers:",
+                choices=[f"{c.id}. {c.first_name} {c.last_name}" for c in customers],
+                qmark=""
+            ).ask()
+
+            table_choice = questionary.select(
+                "Select table:",
+                choices=[f"{t.id}. Table {t.id} ({t.capacity} seats)" for t in tables],
+                qmark=""
+            ).ask()
+
+            time = questionary.text("Enter reservation time (HH:MM, 24-hour):").ask()
+            date = questionary.text("Enter reservation date (YYYY-MM-DD):").ask()
+
+            try:
+               reservation_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                console.print("❌ Invalid date/time format!", style="red")
+                continue
+
+            cust_ids = [int(c.split(".")[0]) for c in cust_choices]
+            table_id = int(table_choice.split(".")[0])
+
+            conflict = session.query(Reservation).filter(
+                Reservation.table_id == table_id,
+                Reservation.time == reservation_datetime
+            ).first()
+
+            if conflict:
+                console.print("❌ Table is already booked at that time!", style="red")
+                available_tables = session.query(Table).filter(
+                    ~Table.reservations.any(Reservation.time == reservation_datetime)
+                ).all()
+
+                if available_tables:
+                    console.print("\n✅ Available alternative tables:", style="green")
+                    for t in available_tables:
+                        console.print(f"- Table {t.id} (Capacity {t.capacity})")
+                    continue
+
+            # ✅ Use relationship instead of foreign key
+            reservation = Reservation(table_id=table_id, time=reservation_datetime)
+
+
+            #  ✅ Add customers to the reservation object before committing to the database.
+            reservation.customers = [session.get(Customer, cid) for cid in cust_ids]
+
+            session.add(reservation)
+            session.commit()
+            console.print("✅ Reservation booked!", style="green")
+
+        elif choice == "View reservations":
+            reservations = session.query(Reservation).all()
+            rich_table = RichTable(title="Reservations")   # ✅ clearer name
+            rich_table.add_column("ID", justify="center")
+            rich_table.add_column("Customer", justify="left")
+            rich_table.add_column("Table", justify="center")
+            rich_table.add_column("Time", justify="left")
+
+            for r in reservations:
+                customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
+                db_table = session.query(Table).filter_by(id=r.table_id).first()  # ✅ renamed
+                table_number = db_table.table_number if db_table else "Unknown"
+                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time))
+
+            console.print(rich_table)
+
+
+        elif choice == "Cancel reservation":
+            reservations = session.query(Reservation).all()
+            if not reservations:
+                console.print("❌ No reservations found.", style="red")
+                continue
+
+            options = [f"{r.id}. {r.time.strftime('%Y-%m-%d %H:%M')}" for r in reservations]
+            selected = questionary.select("Select reservation:", choices=options, qmark="").ask()
+            res_id = int(selected.split(".")[0])
+            reservation = session.get(Reservation, res_id)
+
+            session.delete(reservation)
+            session.commit()
+            console.print("🗑️ Reservation removed!", style="red")
+
+        elif choice == "Back to main menu":
+            break
+
+# ---------------- Searches ----------------
+def manage_searches():
+    while True:
+        console.print("\n[bold underline]Quick Searches[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose a search option:",
+            choices=[
+                "Find customer by name",
+                "Find reservations by date",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
+
+        if choice == "Find customer by name":
+            name = questionary.text("Enter customer first or last name:").ask()
+
+            customers = session.query(Customer).filter(
+                (Customer.first_name.like(f"%{name}%")) | (Customer.last_name.like(f"%{name}%"))
+            ).all()
+
+            if not customers:
+                console.print("❌ No customers found.", style="red")
+            else:
+                table = RichTable(title=f"Search Results for '{name}'")
+                table.add_column("ID", justify="center")
+                table.add_column("First Name", justify="left")
+                table.add_column("Last Name", justify="left")
+                table.add_column("Email", justify="left")
+                table.add_column("Phone", justify="left")
+                for c in customers:
+                    table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
+                console.print(table)
+
+        elif choice == "Find reservations by date":
+            date_str = questionary.text("Enter date (YYYY-MM-DD):").ask()
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                reservations = session.query(Reservation).all()
+                results = [r for r in reservations if r.time.date() == target_date]
+
+                if not results:
+                    console.print("❌ No reservations found.", style="red")
+                else:
+                    table = RichTable(title=f"Reservations on {date_str}")
+                    table.add_column("ID", justify="center")
+                    table.add_column("Customers", justify="left")
+                    table.add_column("Table", justify="center")
+                    table.add_column("Time", justify="left")
+
+                    for r in results:
+                        customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
+                        tbl = session.get(Table, r.table_id)
+
+                        table.add_row(
+                            str(r.id),
+                            customer_names,
+                            str(tbl.table_number if tbl else "Unknown"),
+                            r.time.strftime("%Y-%m-%d %H:%M")
+                        )
+                    console.print(table)
+                    
+            except ValueError:
+                console.print("❌ Invalid date format!", style="red")
+
+        elif choice == "Back to main menu":
+            break
+
+
+if __name__ == "__main__":
+    main_menu()
