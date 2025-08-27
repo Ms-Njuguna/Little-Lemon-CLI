@@ -1,7 +1,7 @@
 import sys
-import questionary
-from rich.console import Console
-from rich.table import Table as RichTable
+import questionary # type: ignore
+from rich.console import Console # type: ignore
+from rich.table import Table as RichTable # type: ignore
 from db import SessionLocal
 from models import Customer, Table, Reservation
 from datetime import datetime
@@ -254,7 +254,62 @@ def manage_reservations():
         elif choice == "Back to main menu":
             break
 
+# ---------------- Searches ----------------
+def manage_searches():
+    while True:
+        console.print("\n[bold underline]Quick Searches[/]\n", style="cyan")
+        choice = questionary.select(
+            "Choose a search option:",
+            choices=[
+                "Find customer by name",
+                "Find reservations by date",
+                "Back to main menu",
+            ],
+            qmark=""
+        ).ask()
 
+        if choice == "Find customer by name":
+            name = questionary.text("Enter customer first or last name:").ask()
+            customers = session.query(Customer).filter(
+                (Customer.first_name.like(f"%{name}%")) | (Customer.last_name.like(f"%{name}%"))
+            ).all()
+            if not customers:
+                console.print("❌ No customers found.", style="red")
+            else:
+                table = RichTable(title=f"Search Results for '{name}'")
+                table.add_column("ID", justify="center")
+                table.add_column("First Name", justify="left")
+                table.add_column("Last Name", justify="left")
+                table.add_column("Email", justify="left")
+                table.add_column("Phone", justify="left")
+                for c in customers:
+                    table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
+                console.print(table)
+
+        elif choice == "Find reservations by date":
+            date_str = questionary.text("Enter date (YYYY-MM-DD):").ask()
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                reservations = session.query(Reservation).all()
+                results = [r for r in reservations if r.time.date() == target_date]
+                if not results:
+                    console.print("❌ No reservations found.", style="red")
+                else:
+                    table = RichTable(title=f"Reservations on {date_str}")
+                    table.add_column("ID", justify="center")
+                    table.add_column("Customer", justify="left")
+                    table.add_column("Table", justify="center")
+                    table.add_column("Time", justify="left")
+                    for r in results:
+                        cust = session.query(Customer).get(r.customer_id)
+                        tbl = session.query(Table).get(r.table_id)
+                        table.add_row(str(r.id), f"{cust.first_name} {cust.last_name}", str(tbl.table_number), r.time.strftime("%Y-%m-%d %H:%M"))
+                    console.print(table)
+            except ValueError:
+                console.print("❌ Invalid date format!", style="red")
+
+        elif choice == "Back to main menu":
+            break
 
 
 if __name__ == "__main__":
