@@ -312,12 +312,14 @@ def manage_reservations():
             rich_table.add_column("Customer", justify="left")
             rich_table.add_column("Table", justify="center")
             rich_table.add_column("Time", justify="left")
+            rich_table.add_column("Occasion", justify="left")
+            rich_table.add_column("Special Requests", justify="left")
 
             for r in reservations:
                 customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
                 db_table = session.query(Table).filter_by(id=r.table_id).first()  # ✅ renamed
                 table_number = db_table.table_number if db_table else "Unknown"
-                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time))
+                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time), r.occasion or "-", r.special_requests or "-")
 
             console.print(rich_table)
 
