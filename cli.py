@@ -285,8 +285,17 @@ def manage_reservations():
                         console.print(f"- Table {t.id} (Capacity {t.capacity})")
                     continue
 
+            # new optional fields
+            occassion = questionary.text("Occassion (optional):").ask()
+            special_requests = questionary.text("Any special request (optional:)").ask()
+
             # ✅ Use relationship instead of foreign key
-            reservation = Reservation(table_id=table_id, time=reservation_datetime)
+            reservation = Reservation(
+                table_id=table_id, 
+                time=reservation_datetime,
+                occassion=occassion if occassion else None,
+                special_requests=special_requests if special_requests else None,
+            )
 
 
             #  ✅ Add customers to the reservation object before committing to the database.
@@ -303,12 +312,14 @@ def manage_reservations():
             rich_table.add_column("Customer", justify="left")
             rich_table.add_column("Table", justify="center")
             rich_table.add_column("Time", justify="left")
+            rich_table.add_column("Occasion", justify="left")
+            rich_table.add_column("Special Requests", justify="left")
 
             for r in reservations:
                 customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
                 db_table = session.query(Table).filter_by(id=r.table_id).first()  # ✅ renamed
                 table_number = db_table.table_number if db_table else "Unknown"
-                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time))
+                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time), r.occasion or "-", r.special_requests or "-")
 
             console.print(rich_table)
 
