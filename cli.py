@@ -285,8 +285,17 @@ def manage_reservations():
                         console.print(f"- Table {t.id} (Capacity {t.capacity})")
                     continue
 
+            # new optional fields
+            occassion = questionary.text("Occassion (optional):").ask()
+            special_requests = questionary.text("Any special request (optional:)").ask()
+
             # ✅ Use relationship instead of foreign key
-            reservation = Reservation(table_id=table_id, time=reservation_datetime)
+            reservation = Reservation(
+                table_id=table_id, 
+                time=reservation_datetime,
+                occassion=occassion if occassion else None,
+                special_requests=special_requests if special_requests else None,
+            )
 
 
             #  ✅ Add customers to the reservation object before committing to the database.
