@@ -88,18 +88,18 @@ def manage_customers():
 
         elif choice == "View customers":
             customers = session.query(Customer).all()
-            table = RichTable(title="Customers")
+            rich_table = RichTable(title="Customers")
 
-            table.add_column("ID", justify="center")
-            table.add_column("First Name", justify="left")
-            table.add_column("Last Name", justify="left")
-            table.add_column("Email", justify="left")
-            table.add_column("Phone", justify="left")
+            rich_table.add_column("ID", justify="center")
+            rich_table.add_column("First Name", justify="left")
+            rich_table.add_column("Last Name", justify="left")
+            rich_table.add_column("Email", justify="left")
+            rich_table.add_column("Phone", justify="left")
 
             for c in customers:
-                table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
+                rich_table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
 
-            console.print(table)
+            console.print(rich_table)
 
         elif choice == "Update customer":
             customers = session.query(Customer).all()
@@ -160,13 +160,13 @@ def manage_tables():
             capacity = int(questionary.text("Enter table capacity:").ask())
             location = questionary.text("Enter the table location (i.e Patio, Window, Indoor):").ask()
 
-            # 🔍 Check if the table number already exists
+            # Check if the table number already exists
             existing = session.query(Table).filter_by(table_number=table_number).first()
 
             if existing:
                 console.print(f"❌ Table number {table_number} already exists.", style="red")
             else:
-                # ✅ Only add if it's not already there
+                # Only add if it's not already there
                 table = Table(table_number=table_number, capacity=capacity, location=location)
                 session.add(table)
                 session.commit()
@@ -174,16 +174,16 @@ def manage_tables():
 
         elif choice == "View tables":
             tables = session.query(Table).all()
-            table_view = RichTable(title="Tables")
-            table_view.add_column("ID", justify="center")
-            table_view.add_column("Table Number", justify="center")
-            table_view.add_column("Capacity", justify="center")
-            table_view.add_column("Location", justify="center")
+            rich_table = RichTable(title="Tables")
+            rich_table.add_column("ID", justify="center")
+            rich_table.add_column("Table Number", justify="center")
+            rich_table.add_column("Capacity", justify="center")
+            rich_table.add_column("Location", justify="center")
 
             for t in tables:
-                table_view.add_row(str(t.id), str(t.table_number), str(t.capacity), t.location or "-")
+                rich_table.add_row(str(t.id), str(t.table_number), str(t.capacity), t.location or "-")
 
-            console.print(table_view)
+            console.print(rich_table)
 
         elif choice == "Update table":
             tables = session.query(Table).all()
@@ -289,7 +289,7 @@ def manage_reservations():
             occassion = questionary.text("Occassion (optional):").ask()
             special_requests = questionary.text("Any special request (optional:)").ask()
 
-            # ✅ Use relationship instead of foreign key
+            # Use relationship instead of foreign key
             reservation = Reservation(
                 table_id=table_id, 
                 time=reservation_datetime,
@@ -298,7 +298,7 @@ def manage_reservations():
             )
 
 
-            #  ✅ Add customers to the reservation object before committing to the database.
+            #  Add customers to the reservation object before committing to the database.
             reservation.customers = [session.get(Customer, cid) for cid in cust_ids]
 
             session.add(reservation)
@@ -319,7 +319,7 @@ def manage_reservations():
                 customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
                 db_table = session.query(Table).filter_by(id=r.table_id).first()  # ✅ renamed
                 table_number = db_table.table_number if db_table else "Unknown"
-                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time), r.occasion or "-", r.special_requests or "-")
+                rich_table.add_row(str(r.id), customer_names, str(table_number), str(r.time), r.occassion or "-", r.special_requests or "-")
 
             console.print(rich_table)
 
@@ -366,15 +366,15 @@ def manage_searches():
             if not customers:
                 console.print("❌ No customers found.", style="red")
             else:
-                table = RichTable(title=f"Search Results for '{name}'")
-                table.add_column("ID", justify="center")
-                table.add_column("First Name", justify="left")
-                table.add_column("Last Name", justify="left")
-                table.add_column("Email", justify="left")
-                table.add_column("Phone", justify="left")
+                rich_table = RichTable(title=f"Search Results for '{name}'")
+                rich_table.add_column("ID", justify="center")
+                rich_table.add_column("First Name", justify="left")
+                rich_table.add_column("Last Name", justify="left")
+                rich_table.add_column("Email", justify="left")
+                rich_table.add_column("Phone", justify="left")
                 for c in customers:
-                    table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
-                console.print(table)
+                    rich_table.add_row(str(c.id), c.first_name, c.last_name, c.email_address, c.phone_number)
+                console.print(rich_table)
 
         elif choice == "Find reservations by date":
             date_str = questionary.text("Enter date (YYYY-MM-DD):").ask()
@@ -386,23 +386,23 @@ def manage_searches():
                 if not results:
                     console.print("❌ No reservations found.", style="red")
                 else:
-                    table = RichTable(title=f"Reservations on {date_str}")
-                    table.add_column("ID", justify="center")
-                    table.add_column("Customers", justify="left")
-                    table.add_column("Table", justify="center")
-                    table.add_column("Time", justify="left")
+                    rich_table = RichTable(title=f"Reservations on {date_str}")
+                    rich_table.add_column("ID", justify="center")
+                    rich_table.add_column("Customers", justify="left")
+                    rich_table.add_column("Table", justify="center")
+                    rich_table.add_column("Time", justify="left")
 
                     for r in results:
                         customer_names = ", ".join([f"{c.first_name} {c.last_name}" for c in r.customers]) or "Unknown"
                         tbl = session.get(Table, r.table_id)
 
-                        table.add_row(
+                        rich_table.add_row(
                             str(r.id),
                             customer_names,
                             str(tbl.table_number if tbl else "Unknown"),
                             r.time.strftime("%Y-%m-%d %H:%M")
                         )
-                    console.print(table)
+                    console.print(rich_table)
                     
             except ValueError:
                 console.print("❌ Invalid date format!", style="red")
