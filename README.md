@@ -110,7 +110,7 @@ python cli.py
 ## Demo Video
 
 I recorded a Loom walkthrough explaining the code and showing the CLI in action:
-![Watch the demo](https://drive.google.com/file/d/1__oGHmYxPacI2bEs9DFEXnqLej0aA-HO/view?usp=sharing)
+[Watch the demo](https://drive.google.com/file/d/1__oGHmYxPacI2bEs9DFEXnqLej0aA-HO/view?usp=sharing)
 
 ---
 
