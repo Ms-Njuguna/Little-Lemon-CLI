@@ -39,12 +39,11 @@ Built with Python, SQLAlchemy ORM, Alembic migrations, and Rich for terminal UI.
 
 ## Tech Stack
 
-- Python 3
-- SQLite (default DB, can be swapped easily)
-- SQLAlchemy ORM for database modeling
-- Alembic for migrations
-- Rich for colorful and structured CLI output
-- Questionary for interactive menus and prompts
+![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red?logo=python)
+![Alembic](https://img.shields.io/badge/Alembic-Migrations-green)
+![Rich](https://img.shields.io/badge/Rich-Console_UI-purple)
+![Questionary](https://img.shields.io/badge/Questionary-Interactive_CLI-orange)
 
 ---
 
@@ -111,7 +110,7 @@ python cli.py
 ## Demo Video
 
 I recorded a Loom walkthrough explaining the code and showing the CLI in action:
-![Watch the demo on Loom]()
+![Watch the demo](https://drive.google.com/file/d/1__oGHmYxPacI2bEs9DFEXnqLej0aA-HO/view?usp=sharing)
 
 ---
 
@@ -147,6 +146,7 @@ From there you can:
 - Add authentication for staff.
 - Advanced search & filtering.
 - Support for PostgreSQL/MySQL.
+- Reservation reminders via email/SMS
 
 ---
 
